@@ -30,6 +30,7 @@ const DoctorDashboard = () => {
   const [activeTab, setActiveTab] = useState("today");
   const [appointments, setAppointments] = useState<any[]>([]);
   const [alerts, setAlerts] = useState<any[]>([]);
+  const [generatingAlerts, setGeneratingAlerts] = useState(false);
   const [stats, setStats] = useState({
     todayAppointments: 0,
     pendingReviews: 0,
@@ -93,6 +94,31 @@ const DoctorDashboard = () => {
   const handleSignOut = async () => {
     await signOut();
     navigate('/auth');
+  };
+
+  const handleGeneratePredictiveAlerts = async () => {
+    if (!user) return;
+    
+    setGeneratingAlerts(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('predictive-alerts', {
+        body: { doctorId: user.id }
+      });
+
+      if (error) {
+        console.error('Error generating alerts:', error);
+        toast.error('Failed to generate alerts');
+        return;
+      }
+
+      toast.success(data.message || 'Predictive alerts generated!');
+      fetchAlerts(); // Refresh alerts
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to generate predictive alerts');
+    } finally {
+      setGeneratingAlerts(false);
+    }
   };
 
   const handleStatusChange = async (appointmentId: string, newStatus: string) => {
@@ -449,6 +475,15 @@ const DoctorDashboard = () => {
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
+                <Button 
+                  variant="default" 
+                  className="w-full justify-start"
+                  onClick={handleGeneratePredictiveAlerts}
+                  disabled={generatingAlerts}
+                >
+                  <Brain className="h-4 w-4 mr-2" />
+                  {generatingAlerts ? 'Analyzing Patients...' : 'Generate AI Alerts'}
+                </Button>
                 <Button variant="outline" className="w-full justify-start">
                   <FileText className="h-4 w-4 mr-2" />
                   Write Prescription

@@ -1,1 +1,4 @@
 project_id = "hfxexqenmakwgigydhlt"
+
+[functions.predictive-alerts]
+verify_jwt = true
