@@ -143,7 +143,7 @@ const Auth = () => {
         // Update doctor profile with image URL
         await supabase
           .from('doctor_profiles')
-          .update({ bio: imageUrl }) // Using bio field temporarily until we add avatar_url
+          .update({ avatar_url: imageUrl })
           .eq('user_id', userId);
       }
     }
