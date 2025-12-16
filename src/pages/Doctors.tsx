@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, MapPin, Star, Clock, Filter } from "lucide-react";
+import { Search, MapPin, Star, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const mockDoctors = [
@@ -48,6 +48,15 @@ const Doctors = () => {
 
   const specialties = ["Cardiologist", "Dermatologist", "Pediatrician", "Orthopedic", "General Medicine"];
 
+  const filteredDoctors = mockDoctors.filter((doctor) => {
+    const matchesSpecialty = selectedSpecialty === "" || doctor.specialty === selectedSpecialty;
+    const matchesSearch = searchTerm === "" || 
+      doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      doctor.specialty.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      doctor.location.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSpecialty && matchesSearch;
+  });
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -72,7 +81,7 @@ const Doctors = () => {
               variant={selectedSpecialty === "" ? "secondary" : "outline"}
               size="sm"
               onClick={() => setSelectedSpecialty("")}
-              className="bg-background/10 border-background/20 text-primary-foreground hover:bg-background/20"
+              className={selectedSpecialty === "" ? "bg-secondary text-secondary-foreground" : "bg-background/10 border-background/20 text-primary-foreground hover:bg-background/20"}
             >
               All
             </Button>
@@ -82,7 +91,7 @@ const Doctors = () => {
                 variant={selectedSpecialty === specialty ? "secondary" : "outline"}
                 size="sm"
                 onClick={() => setSelectedSpecialty(specialty)}
-                className="bg-background/10 border-background/20 text-primary-foreground hover:bg-background/20"
+                className={selectedSpecialty === specialty ? "bg-secondary text-secondary-foreground" : "bg-background/10 border-background/20 text-primary-foreground hover:bg-background/20"}
               >
                 {specialty}
               </Button>
@@ -94,63 +103,75 @@ const Doctors = () => {
       {/* Doctors List */}
       <div className="max-w-6xl mx-auto p-4">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold">Available Doctors</h2>
-          <Button variant="outline" size="sm">
-            <Filter className="h-4 w-4 mr-2" />
-            Filters
-          </Button>
+          <h2 className="text-xl font-semibold">
+            {selectedSpecialty || "Available Doctors"} ({filteredDoctors.length})
+          </h2>
+          {(selectedSpecialty || searchTerm) && (
+            <Button variant="outline" size="sm" onClick={() => { setSelectedSpecialty(""); setSearchTerm(""); }}>
+              Clear Filters
+            </Button>
+          )}
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {mockDoctors.map((doctor) => (
-            <Card key={doctor.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start gap-3">
-                  <img
-                    src={doctor.image}
-                    alt={doctor.name}
-                    className="w-16 h-16 rounded-full object-cover"
-                  />
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg">{doctor.name}</h3>
-                    <Badge variant="secondary" className="mb-2">
-                      {doctor.specialty}
-                    </Badge>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span>{doctor.rating}</span>
-                      <span>• {doctor.experience}</span>
+        {filteredDoctors.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground text-lg">No doctors found matching your criteria.</p>
+            <Button variant="outline" className="mt-4" onClick={() => { setSelectedSpecialty(""); setSearchTerm(""); }}>
+              Clear Filters
+            </Button>
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {filteredDoctors.map((doctor) => (
+              <Card key={doctor.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start gap-3">
+                    <img
+                      src={doctor.image}
+                      alt={doctor.name}
+                      className="w-16 h-16 rounded-full object-cover"
+                    />
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg">{doctor.name}</h3>
+                      <Badge variant="secondary" className="mb-2">
+                        {doctor.specialty}
+                      </Badge>
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                        <span>{doctor.rating}</span>
+                        <span>• {doctor.experience}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="pt-0">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin className="h-4 w-4" />
-                    <span>{doctor.location}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 text-sm">
-                    <Clock className="h-4 w-4 text-primary" />
-                    <span className="text-primary font-medium">{doctor.nextSlot}</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-xl font-bold">₹{doctor.consultationFee}</span>
-                      <span className="text-sm text-muted-foreground ml-1">consultation</span>
+                </CardHeader>
+                
+                <CardContent className="pt-0">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <MapPin className="h-4 w-4" />
+                      <span>{doctor.location}</span>
                     </div>
-                    <Link to={`/doctor/${doctor.id}`}>
-                      <Button size="sm">Book Now</Button>
-                    </Link>
+                    
+                    <div className="flex items-center gap-2 text-sm">
+                      <Clock className="h-4 w-4 text-primary" />
+                      <span className="text-primary font-medium">{doctor.nextSlot}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-xl font-bold">₹{doctor.consultationFee}</span>
+                        <span className="text-sm text-muted-foreground ml-1">consultation</span>
+                      </div>
+                      <Link to={`/doctor/${doctor.id}`}>
+                        <Button size="sm">Book Now</Button>
+                      </Link>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
