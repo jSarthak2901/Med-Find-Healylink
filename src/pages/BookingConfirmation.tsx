@@ -1,34 +1,36 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { CheckCircle, Calendar, Clock, MapPin, User, CreditCard, Phone } from "lucide-react";
+import { CheckCircle, Calendar, Clock, MapPin, User, CreditCard, Phone, UserCircle } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { format } from "date-fns";
 
 const BookingConfirmation = () => {
-  // Mock booking data
+  const location = useLocation();
+  const { user } = useAuth();
+  const bookingData = location.state;
+
+  // Use passed data or fallback
   const booking = {
-    id: "BK-2024-001",
+    id: `BK-${Date.now().toString().slice(-8)}`,
     doctor: {
-      name: "Dr. Sarah Johnson",
-      specialty: "Cardiologist",
-      image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&h=150&fit=crop&crop=face",
-      location: "Heart Care Clinic, Mumbai"
+      name: bookingData?.doctor || "Doctor",
+      specialty: bookingData?.specialty || "Specialist",
+      location: "HealyLink Clinic"
     },
     appointment: {
-      date: "January 16, 2024",
-      time: "2:00 PM",
-      type: "Video Consultation"
+      date: bookingData?.date ? format(new Date(bookingData.date), 'MMMM d, yyyy') : "Scheduled",
+      time: bookingData?.time || "TBD",
+      type: "In-Person Consultation"
     },
     patient: {
-      name: "John Doe",
-      phone: "+91 9876543210",
-      email: "john.doe@email.com"
+      name: user?.user_metadata?.full_name || "Patient",
+      email: user?.email || "N/A"
     },
     payment: {
-      amount: 800,
-      method: "Credit Card",
-      status: "Paid"
+      status: "Pending"
     }
   };
 
@@ -61,11 +63,9 @@ const BookingConfirmation = () => {
           <CardContent className="space-y-6">
             {/* Doctor Info */}
             <div className="flex items-center gap-4">
-              <img
-                src={booking.doctor.image}
-                alt={booking.doctor.name}
-                className="w-16 h-16 rounded-full object-cover"
-              />
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+                <UserCircle className="h-10 w-10 text-muted-foreground" />
+              </div>
               <div>
                 <h3 className="font-semibold text-lg">{booking.doctor.name}</h3>
                 <Badge className="mb-1">{booking.doctor.specialty}</Badge>
@@ -110,10 +110,6 @@ const BookingConfirmation = () => {
                   <span className="font-medium">{booking.patient.name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Phone:</span>
-                  <span className="font-medium">{booking.patient.phone}</span>
-                </div>
-                <div className="flex justify-between">
                   <span className="text-muted-foreground">Email:</span>
                   <span className="font-medium">{booking.patient.email}</span>
                 </div>
@@ -126,21 +122,11 @@ const BookingConfirmation = () => {
             <div>
               <h4 className="font-medium mb-3 flex items-center gap-2">
                 <CreditCard className="h-4 w-4" />
-                Payment Information
+                Payment Status
               </h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Consultation Fee:</span>
-                  <span className="font-medium">₹{booking.payment.amount}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Payment Method:</span>
-                  <span className="font-medium">{booking.payment.method}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Status:</span>
-                  <Badge className="bg-green-600">{booking.payment.status}</Badge>
-                </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Status:</span>
+                <Badge variant="outline">{booking.payment.status}</Badge>
               </div>
             </div>
           </CardContent>
@@ -153,10 +139,10 @@ const BookingConfirmation = () => {
           </CardHeader>
           <CardContent>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>• You will receive a video call link 15 minutes before your appointment</li>
-              <li>• Please ensure you have a stable internet connection</li>
-              <li>• Keep your medical reports and medications list ready</li>
-              <li>• You can reschedule up to 2 hours before the appointment</li>
+              <li>• Please arrive 15 minutes before your scheduled appointment</li>
+              <li>• Bring any relevant medical reports and documents</li>
+              <li>• Keep your medications list ready for reference</li>
+              <li>• You can reschedule up to 24 hours before the appointment</li>
             </ul>
           </CardContent>
         </Card>

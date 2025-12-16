@@ -12,7 +12,7 @@ interface AuthContextType {
   role: AppRole | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, fullName: string, role: AppRole, phone?: string, specialty?: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, fullName: string, role: AppRole, phone?: string, specialty?: string) => Promise<{ error: Error | null; userId?: string }>;
   signOut: () => Promise<void>;
 }
 
@@ -98,11 +98,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     role: AppRole,
     phone?: string,
     specialty?: string
-  ) => {
+  ): Promise<{ error: Error | null; userId?: string }> => {
     try {
       const redirectUrl = `${window.location.origin}/`;
       
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -126,7 +126,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       
       toast.success('Account created successfully!');
-      return { error: null };
+      return { error: null, userId: data.user?.id };
     } catch (error) {
       return { error: error as Error };
     }

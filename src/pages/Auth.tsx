@@ -8,9 +8,11 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Heart, Mail, Lock, User, Phone, Stethoscope, UserRound } from "lucide-react";
+import { Heart, Mail, Lock, User, Phone, Stethoscope, UserRound, Upload, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -36,6 +38,8 @@ const signupSchema = z.object({
 const Auth = () => {
   const [activeTab, setActiveTab] = useState("login");
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const navigate = useNavigate();
   const { signIn, signUp, user, role, loading } = useAuth();
 
@@ -72,6 +76,49 @@ const Auth = () => {
 
   const selectedRole = signupForm.watch("role");
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Image size should be less than 5MB");
+        return;
+      }
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+  };
+
+  const uploadDoctorImage = async (userId: string): Promise<string | null> => {
+    if (!selectedImage) return null;
+
+    const fileExt = selectedImage.name.split('.').pop();
+    const fileName = `${userId}/${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('doctor-images')
+      .upload(fileName, selectedImage);
+
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      return null;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('doctor-images')
+      .getPublicUrl(fileName);
+
+    return publicUrl;
+  };
+
   const onLogin = async (values: z.infer<typeof loginSchema>) => {
     setIsLoading(true);
     const { error } = await signIn(values.email, values.password);
@@ -80,7 +127,8 @@ const Auth = () => {
 
   const onSignup = async (values: z.infer<typeof signupSchema>) => {
     setIsLoading(true);
-    const { error } = await signUp(
+    
+    const { error, userId } = await signUp(
       values.email,
       values.password,
       values.fullName,
@@ -88,6 +136,18 @@ const Auth = () => {
       values.phone,
       values.specialty
     );
+
+    if (!error && userId && values.role === 'doctor' && selectedImage) {
+      const imageUrl = await uploadDoctorImage(userId);
+      if (imageUrl) {
+        // Update doctor profile with image URL
+        await supabase
+          .from('doctor_profiles')
+          .update({ bio: imageUrl }) // Using bio field temporarily until we add avatar_url
+          .eq('user_id', userId);
+      }
+    }
+    
     setIsLoading(false);
   };
 
@@ -183,7 +243,12 @@ const Auth = () => {
                           <FormLabel>I am a</FormLabel>
                           <FormControl>
                             <RadioGroup
-                              onValueChange={field.onChange}
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                if (value !== 'doctor') {
+                                  removeImage();
+                                }
+                              }}
                               defaultValue={field.value}
                               className="grid grid-cols-2 gap-4"
                             >
@@ -240,22 +305,67 @@ const Auth = () => {
                     />
 
                     {selectedRole === "doctor" && (
-                      <FormField
-                        control={signupForm.control}
-                        name="specialty"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Specialty</FormLabel>
-                            <FormControl>
-                              <div className="relative">
-                                <Stethoscope className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                                <Input placeholder="e.g., Cardiology, Pediatrics" className="pl-10" {...field} />
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      <>
+                        <FormField
+                          control={signupForm.control}
+                          name="specialty"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Specialty</FormLabel>
+                              <FormControl>
+                                <div className="relative">
+                                  <Stethoscope className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                                  <Input placeholder="e.g., Cardiology, Pediatrics" className="pl-10" {...field} />
+                                </div>
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Doctor Image Upload */}
+                        <div className="space-y-2">
+                          <FormLabel>Profile Photo (Optional)</FormLabel>
+                          {!imagePreview ? (
+                            <div className="border-2 border-dashed border-muted rounded-lg p-4 text-center">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleImageSelect}
+                                className="hidden"
+                                id="doctor-image"
+                              />
+                              <label
+                                htmlFor="doctor-image"
+                                className="cursor-pointer flex flex-col items-center gap-2"
+                              >
+                                <Upload className="h-8 w-8 text-muted-foreground" />
+                                <span className="text-sm text-muted-foreground">
+                                  Click to upload profile photo
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  Max 5MB
+                                </span>
+                              </label>
+                            </div>
+                          ) : (
+                            <div className="relative inline-block">
+                              <img
+                                src={imagePreview}
+                                alt="Preview"
+                                className="w-24 h-24 rounded-full object-cover"
+                              />
+                              <button
+                                type="button"
+                                onClick={removeImage}
+                                className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </>
                     )}
 
                     <FormField

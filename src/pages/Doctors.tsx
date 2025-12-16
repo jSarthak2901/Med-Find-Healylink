@@ -1,55 +1,94 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, MapPin, Star, Clock } from "lucide-react";
+import { Search, MapPin, Star, Clock, UserCircle } from "lucide-react";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
-const mockDoctors = [
-  {
-    id: 1,
-    name: "Dr. Sarah Johnson",
-    specialty: "Cardiologist",
-    rating: 4.8,
-    experience: "15 years",
-    location: "Heart Care Clinic, Mumbai",
-    consultationFee: 800,
-    nextSlot: "Today 2:00 PM",
-    image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&h=150&fit=crop&crop=face"
-  },
-  {
-    id: 2,
-    name: "Dr. Rajesh Kumar",
-    specialty: "Dermatologist",
-    rating: 4.9,
-    experience: "12 years",
-    location: "Skin Care Center, Delhi",
-    consultationFee: 600,
-    nextSlot: "Tomorrow 10:00 AM",
-    image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=150&h=150&fit=crop&crop=face"
-  },
-  {
-    id: 3,
-    name: "Dr. Priya Sharma",
-    specialty: "Pediatrician",
-    rating: 4.7,
-    experience: "10 years",
-    location: "Children's Hospital, Bangalore",
-    consultationFee: 500,
-    nextSlot: "Today 4:30 PM",
-    image: "https://images.unsplash.com/photo-1594824388548-c2c2469c0e36?w=150&h=150&fit=crop&crop=face"
-  }
-];
+interface Doctor {
+  id: string;
+  user_id: string;
+  name: string;
+  specialty: string;
+  rating: number;
+  experience: string;
+  location: string;
+  consultationFee: number;
+  nextSlot: string;
+  image: string | null;
+}
 
 const Doctors = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSpecialty, setSelectedSpecialty] = useState("");
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const specialties = ["Cardiologist", "Dermatologist", "Pediatrician", "Orthopedic", "General Medicine"];
+  const specialties = ["Cardiologist", "Dermatologist", "Pediatrician", "Orthopedic", "General Medicine", "Cardiology", "Pediatrics", "Neurology"];
 
-  const filteredDoctors = mockDoctors.filter((doctor) => {
-    const matchesSpecialty = selectedSpecialty === "" || doctor.specialty === selectedSpecialty;
+  useEffect(() => {
+    fetchDoctors();
+  }, []);
+
+  const fetchDoctors = async () => {
+    try {
+      const { data: doctorProfiles, error } = await supabase
+        .from('doctor_profiles')
+        .select(`
+          id,
+          user_id,
+          specialty,
+          rating,
+          experience_years,
+          consultation_fee,
+          hospital_affiliation,
+          bio,
+          is_available
+        `)
+        .eq('is_available', true);
+
+      if (error) {
+        console.error('Error fetching doctors:', error);
+        return;
+      }
+
+      // Fetch profile info for each doctor
+      const doctorsWithProfiles = await Promise.all(
+        (doctorProfiles || []).map(async (doc) => {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('user_id', doc.user_id)
+            .maybeSingle();
+
+          return {
+            id: doc.id,
+            user_id: doc.user_id,
+            name: profile?.full_name ? `Dr. ${profile.full_name}` : 'Doctor',
+            specialty: doc.specialty,
+            rating: Number(doc.rating) || 4.5,
+            experience: `${doc.experience_years || 0} years`,
+            location: doc.hospital_affiliation || 'Available Online',
+            consultationFee: Number(doc.consultation_fee) || 500,
+            nextSlot: 'Available Today',
+            image: doc.bio?.startsWith('http') ? doc.bio : null, // bio field stores image URL temporarily
+          };
+        })
+      );
+
+      setDoctors(doctorsWithProfiles);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredDoctors = doctors.filter((doctor) => {
+    const matchesSpecialty = selectedSpecialty === "" || 
+      doctor.specialty.toLowerCase().includes(selectedSpecialty.toLowerCase());
     const matchesSearch = searchTerm === "" || 
       doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doctor.specialty.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -113,7 +152,11 @@ const Doctors = () => {
           )}
         </div>
 
-        {filteredDoctors.length === 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : filteredDoctors.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground text-lg">No doctors found matching your criteria.</p>
             <Button variant="outline" className="mt-4" onClick={() => { setSelectedSpecialty(""); setSearchTerm(""); }}>
@@ -126,11 +169,17 @@ const Doctors = () => {
               <Card key={doctor.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader className="pb-3">
                   <div className="flex items-start gap-3">
-                    <img
-                      src={doctor.image}
-                      alt={doctor.name}
-                      className="w-16 h-16 rounded-full object-cover"
-                    />
+                    {doctor.image ? (
+                      <img
+                        src={doctor.image}
+                        alt={doctor.name}
+                        className="w-16 h-16 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+                        <UserCircle className="w-12 h-12 text-muted-foreground" />
+                      </div>
+                    )}
                     <div className="flex-1">
                       <h3 className="font-semibold text-lg">{doctor.name}</h3>
                       <Badge variant="secondary" className="mb-2">
@@ -162,7 +211,7 @@ const Doctors = () => {
                         <span className="text-xl font-bold">₹{doctor.consultationFee}</span>
                         <span className="text-sm text-muted-foreground ml-1">consultation</span>
                       </div>
-                      <Link to={`/doctor/${doctor.id}`}>
+                      <Link to={`/doctor/${doctor.user_id}`}>
                         <Button size="sm">Book Now</Button>
                       </Link>
                     </div>
