@@ -42,18 +42,32 @@ const Auth = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const navigate = useNavigate();
   const { signIn, signUp, user, role, loading } = useAuth();
 
+  // Listen for password recovery event
   useEffect(() => {
-    if (!loading && user && role) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecoveryMode(true);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!loading && user && role && !isRecoveryMode) {
       if (role === 'doctor') {
         navigate('/doctor-dashboard');
       } else {
         navigate('/dashboard');
       }
     }
-  }, [user, role, loading, navigate]);
+  }, [user, role, loading, navigate, isRecoveryMode]);
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -148,6 +162,34 @@ const Auth = () => {
     }
   };
 
+  const handlePasswordUpdate = async () => {
+    if (!newPassword || !confirmNewPassword) {
+      toast.error("Please fill in both password fields");
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      toast.error("Passwords don't match");
+      return;
+    }
+
+    setIsLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setIsLoading(false);
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Password updated successfully!");
+      setIsRecoveryMode(false);
+      setNewPassword("");
+      setConfirmNewPassword("");
+    }
+  };
+
   const onSignup = async (values: z.infer<typeof signupSchema>) => {
     setIsLoading(true);
     
@@ -178,6 +220,77 @@ const Auth = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  // Password recovery mode UI
+  if (isRecoveryMode) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center p-4">
+        <div className="max-w-md w-full">
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <div className="p-3 bg-primary rounded-full">
+                <Heart className="h-8 w-8 text-primary-foreground" />
+              </div>
+              <h1 className="text-3xl font-bold text-primary">HealyLink</h1>
+            </div>
+            <p className="text-muted-foreground">Reset your password</p>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-center">Set New Password</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">New Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    type="password"
+                    placeholder="Enter new password"
+                    className="pl-10"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Confirm New Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    type="password"
+                    placeholder="Confirm new password"
+                    className="pl-10"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  />
+                </div>
+              </div>
+              <Button 
+                className="w-full" 
+                onClick={handlePasswordUpdate}
+                disabled={isLoading}
+              >
+                {isLoading ? "Updating..." : "Update Password"}
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => {
+                  setIsRecoveryMode(false);
+                  setNewPassword("");
+                  setConfirmNewPassword("");
+                }}
+              >
+                Cancel
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
