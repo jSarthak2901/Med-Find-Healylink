@@ -40,6 +40,8 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
   const navigate = useNavigate();
   const { signIn, signUp, user, role, loading } = useAuth();
 
@@ -123,6 +125,27 @@ const Auth = () => {
     setIsLoading(true);
     const { error } = await signIn(values.email, values.password);
     setIsLoading(false);
+  };
+
+  const handleForgotPassword = async () => {
+    if (!forgotPasswordEmail) {
+      toast.error("Please enter your email address");
+      return;
+    }
+    
+    setIsLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail, {
+      redirectTo: `${window.location.origin}/auth`,
+    });
+    setIsLoading(false);
+    
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Password reset email sent! Check your inbox.");
+      setShowForgotPassword(false);
+      setForgotPasswordEmail("");
+    }
   };
 
   const onSignup = async (values: z.infer<typeof signupSchema>) => {
@@ -220,10 +243,51 @@ const Auth = () => {
                       )}
                     />
                     <div className="text-right">
-                      <Button variant="link" className="p-0 h-auto text-sm">
+                      <Button 
+                        type="button" 
+                        variant="link" 
+                        className="p-0 h-auto text-sm"
+                        onClick={() => setShowForgotPassword(true)}
+                      >
                         Forgot password?
                       </Button>
                     </div>
+
+                    {showForgotPassword && (
+                      <div className="border rounded-lg p-4 space-y-3 bg-muted/50">
+                        <p className="text-sm font-medium">Reset your password</p>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                          <Input 
+                            placeholder="Enter your email" 
+                            className="pl-10"
+                            value={forgotPasswordEmail}
+                            onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            type="button" 
+                            size="sm" 
+                            onClick={handleForgotPassword}
+                            disabled={isLoading}
+                          >
+                            {isLoading ? "Sending..." : "Send Reset Link"}
+                          </Button>
+                          <Button 
+                            type="button" 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => {
+                              setShowForgotPassword(false);
+                              setForgotPasswordEmail("");
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                     <Button type="submit" className="w-full" disabled={isLoading}>
                       {isLoading ? "Logging in..." : "Login"}
                     </Button>
