@@ -73,7 +73,7 @@ const DoctorProfile = () => {
         experience: `${doctorProfile.experience_years || 0} years`,
         location: doctorProfile.hospital_affiliation || 'Available Online',
         consultationFee: Number(doctorProfile.consultation_fee) || 500,
-        image: doctorProfile.bio?.startsWith('http') ? doctorProfile.bio : null,
+        image: doctorProfile.avatar_url || null,
         qualifications: doctorProfile.qualification ? [doctorProfile.qualification] : ['MBBS'],
         languages: ['English', 'Hindi'],
         about: `Experienced ${doctorProfile.specialty} specialist with ${doctorProfile.experience_years || 0} years of experience.`,

@@ -44,7 +44,7 @@ const Doctors = () => {
           experience_years,
           consultation_fee,
           hospital_affiliation,
-          bio,
+          avatar_url,
           is_available
         `)
         .eq('is_available', true);
@@ -73,7 +73,7 @@ const Doctors = () => {
             location: doc.hospital_affiliation || 'Available Online',
             consultationFee: Number(doc.consultation_fee) || 500,
             nextSlot: 'Available Today',
-            image: doc.bio?.startsWith('http') ? doc.bio : null, // bio field stores image URL temporarily
+            image: doc.avatar_url || null,
           };
         })
       );

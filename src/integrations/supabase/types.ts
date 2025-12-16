@@ -110,6 +110,7 @@ export type Database = {
       doctor_profiles: {
         Row: {
           available_days: string[] | null
+          avatar_url: string | null
           bio: string | null
           consultation_fee: number | null
           created_at: string | null
@@ -128,6 +129,7 @@ export type Database = {
         }
         Insert: {
           available_days?: string[] | null
+          avatar_url?: string | null
           bio?: string | null
           consultation_fee?: number | null
           created_at?: string | null
@@ -146,6 +148,7 @@ export type Database = {
         }
         Update: {
           available_days?: string[] | null
+          avatar_url?: string | null
           bio?: string | null
           consultation_fee?: number | null
           created_at?: string | null
