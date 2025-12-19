@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import Chatbot from "@/components/Chatbot";
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("upcoming");
@@ -399,6 +400,9 @@ const Dashboard = () => {
                 </div>
               </CardContent>
             </Card>
+              <div className="mt-6">
+                <Chatbot />
+              </div>
           </div>
         </div>
       </div>
