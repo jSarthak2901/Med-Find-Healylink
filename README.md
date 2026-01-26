@@ -1,3 +1,5 @@
+Original repository: https://github.com/Vasu050/med-find-android
+
 # Welcome to your Lovable project
 
 ## Project info
