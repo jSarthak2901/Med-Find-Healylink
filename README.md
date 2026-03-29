@@ -1,7 +1,7 @@
 # Med-Find-HealyLink  
 Intelligent Patient Management and Therapy Scheduling System  
 
-Developed as part of a Cosmohack1 Hackathon  
+Developed as part of a Cosmohack1 by Team CodeX  
 Original repository: https://github.com/Vasu050/med-find-android
 
 ## Team Details
