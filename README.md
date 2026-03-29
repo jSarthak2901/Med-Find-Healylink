@@ -110,12 +110,3 @@ https://drive.google.com/file/d/1o4BEjf-ioKl7m63du1yQlknRfWyDBPtt/view?usp=drive
 
 Demo Video:  
 https://drive.google.com/file/d/1ZYjfVADzJFcVoIlS9SPWdPWIZsSnNper/view?usp=drive_link  
-
----
-
-## Getting Started
-
-### Clone the Repository
-```bash
-git clone <YOUR_GIT_URL>
-cd Med-Find-HealyLinkovable.dev/tips-tricks/custom-domain#step-by-step-guide)
